@@ -40,6 +40,9 @@ ND_lower_lock = None
 # node unique ID
 node_id = 'None'
 
+picked_list = 'None'
+served_list = 'None'
+
 # initialize
 def initialize():
     global logging_lock

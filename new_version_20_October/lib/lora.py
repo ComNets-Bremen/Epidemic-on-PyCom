@@ -177,12 +177,12 @@ def recv_msg():
             # lock and insert neighbour
             with neigh_list_lock:
                 t = utime.ticks_ms()
-                new_neigh = items[1] + '-' + str(t)
+                new_neigh = str(t) + '-' + items[1]
             with common.ND_lower_lock:
                 try:
                     common.ND_lower_q.append(new_neigh)
-                    with common.logging_lock:
-                        common.log_activity('neighbour recieved' + items[1])
+                    #with common.logging_lock:
+                    #    common.log_activity('neighbour recieved' + items[1])
                 except:
                     pass
 
@@ -197,8 +197,9 @@ def recv_msg():
             if not (items[2] == settings.BROADCAST_ADDRESS \
                 or items[2] == common.node_id):
                 continue
-
+            #print(items)
             msg = items[0] + ':' + items[1] + ':' + items[3] + ':' +items[4] + ':' +items[5]
+            #print('msg sent to epi from lora is' + msg)
             # push message to queue with fwd
             with common.epidemic_lower_lock:
                 try:
