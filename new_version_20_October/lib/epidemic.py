@@ -38,8 +38,8 @@ def initialize():
     #initialize Lists
     cache = {}
     neigh_list = {}
-    common.served_list = ['Mac1']
-    common.picked_list = ['Mac1']
+    served_list = ['Mac1', 'Mac2']
+    picked_list = ['Mac1', 'Mac2']
 
     #initialize locks
     cache_lock = _thread.allocate_lock()
@@ -66,11 +66,8 @@ def data_from_app():
             try:
                 #get data from queue
                 data = common.epidemic_upper_q.popleft()
-                #with common.logging_lock:
-                #    common.log_activity('epid < appl |  ' + data)
 
             except:
-                #print("error in epidemic")
                 data = None
 
         if not data:
@@ -79,10 +76,12 @@ def data_from_app():
         #split the data to be saved in the cache
         items = data.split(':')
         #insert the items in the cache (or update the cache)
-        #
         #with cache_lock:
-        update_cache(items[1],items[0])
-        #print('statement after update_cache')
+        with cache_lock:
+            if len(cache) < 3:
+                update_cache(items[1],items[0])
+            else:
+                pass
 
 
 #recieve data from neighbour discovery module
@@ -95,21 +94,15 @@ def new_neighbour():
             try:
                 #get data from queue
                 data = common.epidemic_side_q.popleft()
-                #with common.logging_lock:
-                    #common.log_activity('popped out data in Epidemic' + data)
 
                 #update the new neighbour
                 items = data.split('-')
 
                 updating = {items[1]:items[0]}
                 #print(updating)
+                with neigh_list_lock:
+                    neigh_list.update(updating)
 
-                neigh_list.update(updating)
-                #print(neigh_list)
-
-                #with common.logging_lock:
-                #    common.log_activity(neigh_list)
-                #print('NL in Epide layer is' + neigh_list)
             except:
                 pass
 
@@ -130,7 +123,7 @@ def anti_entropy():
     while True:
 
         #wait for sometime to pick the neighbour (8sec here)
-        time.sleep(8)
+        time.sleep(6)
 
         #pick a random neighbour to start the anti-entropy
         with neigh_list_lock:
@@ -138,9 +131,6 @@ def anti_entropy():
             if len(neigh_list) == 0:
                 continue
             MAC_list = list(neigh_list.keys())
-            #print(MAC_list)
-            #select random neighbour
-            #dest = common.pick_item(list(neigh_list.keys()))
             for i in MAC_list:
                 count = 0
                 for j in common.served_list:
@@ -153,10 +143,11 @@ def anti_entropy():
                             else:
                                 count += 1
                                 if count == len(common.served_list): #if it did not match until end of served list
-                                    common.picked_list.append(i)
-                                    with common.logging_lock:
-                                        common.log_activity('neighbour picked' + i)#check if my address is greater than the picked destination address
+                                    #check if my address is greater than the picked destination address
                                     if str(common.node_id) > i:#get the current summary vector
+                                        common.picked_list.append(i)
+                                        with common.logging_lock:
+                                            common.log_activity('neighbour picked' + i)
                                         with cache_lock:
                                             summary_vector = list(cache.keys())
                                             SV = '-'.join(summary_vector)
@@ -188,8 +179,7 @@ def receive_from_lora():
             try:
                 # get message from the queue
                 msg = common.epidemic_lower_q.popleft()
-                #with common.logging_lock:
-                #    common.log_activity('RRS   < link  | ' + msg)
+
             except:
                 msg = None
 
@@ -211,8 +201,7 @@ def receive_from_lora():
 
         #data?
         elif items[0] == 'D':
-            #print('data is rxed into epidemic' + str(list(items[1:])))
-            #print('Epidemic Data D once rxred from lora' + msg)
+
             receive_Data(list(items[1:]))
         # unknown type of message
         else:
@@ -375,15 +364,12 @@ def update_cache(key,value):
         #print("Inside With UC   ")
         #update cache item
         cache[key] = value
-        #with common.logging_lock:
-            #common.log_activity('Epid > cach |  ' + key + ':' + value)
 
         #remove an entry if cache has exceeded the limit (10 here)
         if len(cache) > 10:
             rkey = list(cache)[0]
             rvalue = cache[rkey]
-            #with common.logging_lock:
-                #common.log_activity('Epid ! cach |  ' + rkey+':'+rvalue)
+            
             del cache[rkey]
 
 
@@ -396,8 +382,6 @@ def update_neighbours(MAC,time):
     with neigh_list_lock:
         # insert neighbours into list
         neigh_list[MAC] = time
-        #with common.logging_lock:
-            #common.log_activity('Epid > N_li |  ' + key + ':' + value)
 
         #update neighbour list
         current_time = utime.ticks_ms()
