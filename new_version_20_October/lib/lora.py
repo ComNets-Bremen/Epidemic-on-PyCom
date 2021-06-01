@@ -103,8 +103,8 @@ def send_msg():
         with common.lora_upper_lock:
             try:
                 msg = common.lora_upper_q.popleft()
-                with common.logging_lock:
-                    common.log_activity('sent the message out recieved from epidemic')
+                # with common.logging_lock:
+                #     common.log_activity('Lora recieved the packet from epidemic')
             except:
                 msg = None
 
@@ -119,7 +119,9 @@ def send_msg():
         items = msg.split(':')
         msg1 = items[0] + ':'  + common.node_id + ':' + items[1]+ ':' + items[2]+ ':' + items[3]+ ':' + items[4]
         with common.logging_lock:
-            common.log_activity('sent message is' + msg1)
+            common.dest_id = items[1]
+            common.packet_type = items[0] +'  '
+            common.log_activity('The packet sent out from Lora is' + ' '+ msg1)
 
         # send the packet out
         sock.send(msg1)
@@ -181,8 +183,8 @@ def recv_msg():
             with common.ND_lower_lock:
                 try:
                     common.ND_lower_q.append(new_neigh)
-                    #with common.logging_lock:
-                    #    common.log_activity('neighbour recieved' + items[1])
+                    # with common.logging_lock:
+                    #     common.log_activity('neighbour recieved' + items[1])
                 except:
                     pass
 
@@ -204,8 +206,10 @@ def recv_msg():
             with common.epidemic_lower_lock:
                 try:
                     common.epidemic_lower_q.append(msg)
-                    #with common.logging_lock:
-                    #    common.log_activity('link  > epid   | ' + msg)
+                    with common.logging_lock:
+                        common.dest_id = items[1]
+                        common.packet_type = items[0]+'  '
+                        common.log_activity('Packet is recieved in Lora and sending to epidemic' +' '+ msg)
                 except:
                     pass
 

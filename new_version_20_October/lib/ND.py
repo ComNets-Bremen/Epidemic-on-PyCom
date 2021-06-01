@@ -39,11 +39,13 @@ def ND_from_Lora_to_Epi():
         with common.ND_lower_lock:
             try:
                 hello_msg = common.ND_lower_q.popleft()
-
+                #with common.logging_lock:
+                #    common.log_activity('popped out the msg in ND' + hello_msg)
                 with common.epidemic_side_lock:
                     try:
                         common.epidemic_side_q.append(hello_msg)
-
+                        ##with common.logging_lock:
+                        #    common.log_activity('appended to Epid q a meassage from Lora' + hello_msg)
                     except:
                         pass
             except:

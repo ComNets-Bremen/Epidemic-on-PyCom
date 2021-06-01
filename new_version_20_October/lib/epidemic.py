@@ -38,8 +38,8 @@ def initialize():
     #initialize Lists
     cache = {}
     neigh_list = {}
-    served_list = ['Mac1', 'Mac2']
-    picked_list = ['Mac1', 'Mac2']
+    common.served_list = ['Mac1']
+    common.picked_list = ['Mac1']
 
     #initialize locks
     cache_lock = _thread.allocate_lock()
@@ -66,8 +66,11 @@ def data_from_app():
             try:
                 #get data from queue
                 data = common.epidemic_upper_q.popleft()
+                #with common.logging_lock:
+                #    common.log_activity('epid < appl |  ' + data)
 
             except:
+                #print("error in epidemic")
                 data = None
 
         if not data:
@@ -76,12 +79,10 @@ def data_from_app():
         #split the data to be saved in the cache
         items = data.split(':')
         #insert the items in the cache (or update the cache)
+        #
         #with cache_lock:
-        with cache_lock:
-            if len(cache) < 3:
-                update_cache(items[1],items[0])
-            else:
-                pass
+        update_cache(items[1],items[0])
+        #print('statement after update_cache')
 
 
 #recieve data from neighbour discovery module
@@ -94,15 +95,21 @@ def new_neighbour():
             try:
                 #get data from queue
                 data = common.epidemic_side_q.popleft()
+                #with common.logging_lock:
+                    #common.log_activity('popped out data in Epidemic' + data)
 
                 #update the new neighbour
                 items = data.split('-')
 
                 updating = {items[1]:items[0]}
                 #print(updating)
-                with neigh_list_lock:
-                    neigh_list.update(updating)
 
+                neigh_list.update(updating)
+                #print(neigh_list)
+
+                #with common.logging_lock:
+                #    common.log_activity(neigh_list)
+                #print('NL in Epide layer is' + neigh_list)
             except:
                 pass
 
@@ -123,7 +130,10 @@ def anti_entropy():
     while True:
 
         #wait for sometime to pick the neighbour (8sec here)
-        time.sleep(6)
+        time.sleep(8)
+
+        if len(cache) == 0:
+            continue
 
         #pick a random neighbour to start the anti-entropy
         with neigh_list_lock:
@@ -131,6 +141,11 @@ def anti_entropy():
             if len(neigh_list) == 0:
                 continue
             MAC_list = list(neigh_list.keys())
+            #print(MAC_list)
+            #select random neighbour
+            #dest = common.pick_item(list(neigh_list.keys()))
+            #print("served_list is ", common.served_list)
+            #print("picked_list is ", common.picked_list)
             for i in MAC_list:
                 count = 0
                 for j in common.served_list:
@@ -142,27 +157,47 @@ def anti_entropy():
                                 break
                             else:
                                 count += 1
-                                if count == len(common.served_list): #if it did not match until end of served list
-                                    #check if my address is greater than the picked destination address
-                                    if str(common.node_id) > i:#get the current summary vector
+                                if count == len(common.served_list):#if it did not match until end of served list
+                                    my_add = common.node_id
+                                    if i in common.picked_list:
+                                        break
+                                    if i in common.served_list:
+                                        break
+                                    elif str(my_add) > i:#check if my address is greater than the picked destination address
                                         common.picked_list.append(i)
                                         with common.logging_lock:
+                                            common.dest_id = i
                                             common.log_activity('neighbour picked' + i)
                                         with cache_lock:
                                             summary_vector = list(cache.keys())
                                             SV = '-'.join(summary_vector)
-                                            #build message
-                                            #format => SV:dest:flag1:flag2:info
+                                                #build message
+                                                #format => SV:dest:flag1:flag2:info
                                             msg = 'SV' + ':' + i + ':' + 'FS' + ':' + 'N' + ':' + SV
-                                            # queue message to send to link layer
-                                        with common.lora_upper_lock:
-                                            try:
-                                                common.lora_upper_q.append(msg)
-                                                with common.logging_lock:
-                                                    #common.log_activity('epid > lora |  ' + msg)
-                                                    common.log_activity('SV sent to lora' + msg)
-                                            except:
-                                                pass
+                                                # queue message to send to link layer
+                                            with common.logging_lock:
+                                                common.dest_id = i
+                                                common.packet_type = 'None'
+                                                common.log_activity('Starting anti entropy session with' +' '+ i)
+                                            with common.lora_upper_lock:
+                                                try:
+                                                    common.lora_upper_q.append(msg)
+                                                    with common.logging_lock:
+                                                        common.dest_id = i
+                                                        common.packet_type = 'None'
+                                                        #common.log_activity('epid > lora |  ' + msg)
+                                                        common.log_activity('SV sent to lora' +' '+ msg)
+                                                except:
+                                                    pass
+                                    else:
+                                        common.picked_list.append(i)
+                                        with common.logging_lock:
+                                            common.dest_id = i
+                                            common.packet_type = 'None'
+                                            common.log_activity('waiting for anti entropy session to begin from the node' + ' '+ i)
+
+                                else:
+                                    pass
 
 
 # receive data from lora layer
@@ -179,7 +214,8 @@ def receive_from_lora():
             try:
                 # get message from the queue
                 msg = common.epidemic_lower_q.popleft()
-
+                #with common.logging_lock:
+                #    common.log_activity('RRS   < link  | ' + msg)
             except:
                 msg = None
 
@@ -193,15 +229,28 @@ def receive_from_lora():
 
         # request?
         if items[0] == 'R':
+            with common.logging_lock:
+                common.dest_id = items[1]
+                common.packet_type = 'None'
+                common.log_activity('Request recieved from '+ items[1] +' '+ msg)
             receive_request(list(items[1:]))
 
         #summary_vector?
         elif items[0] == 'SV':
+            with common.logging_lock:
+                common.dest_id = items[1]
+                common.packet_type = 'None'
+                common.log_activity('SV recieved from '+ items[1] +' '+ msg)
             receive_SV(list(items[1:]))
 
         #data?
         elif items[0] == 'D':
-
+            with common.logging_lock:
+                common.dest_id = items[1]
+                common.packet_type = 'None'
+                common.log_activity('Data recieved from '+ items[1] +' '+ msg)
+            #print('data is rxed into epidemic' + str(list(items[1:])))
+            #print('Epidemic Data D once rxred from lora' + msg)
             receive_Data(list(items[1:]))
         # unknown type of message
         else:
@@ -213,16 +262,18 @@ def receive_request(R_list):
     global cache
     global cache_lock
 
-    with cache_lock:
-        try:
-            #fetch the required data
-            data_required = cache.get(R_list[-1])
-            #print('data packet last position' + data_required)
-        except:
-            log_activity('data does not exist')
+    try:
+        #fetch the required data
+        data_required = cache.get(R_list[-1])
+        #print('data packet last position' + data_required)
+    except:
+        with common.logging_lock:
+            common.dest_id = R_list[0]
+            common.packet_type = 'None'
+            log_activity('data does not exist in cache')
 
     #create the data string to be passes to lora layer
-    msg = 'D'+':'+ R_list[0] + ':' + R_list[1] + ':' + R_list[2] + ':' + data_required + '-'+ R_list[-1]
+    msg = 'D'+':'+ R_list[0] + ':' + R_list[1] + ':' + R_list[2] + ':' + str(data_required) + '-'+ R_list[-1]
     #print('data packet in epi is generated and it is' + msg)
 
     #push this item to the lora_upper_q to be sent out
@@ -230,7 +281,9 @@ def receive_request(R_list):
         try:
             common.lora_upper_q.append(msg)
             with common.logging_lock:
-                common.log_activity('data sent to lora' + msg)
+                common.dest_id = R_list[0]
+                common.packet_type = 'None'
+                common.log_activity('data packet is sent to lora' + ' '+ msg)
         except:
             pass
 
@@ -241,22 +294,24 @@ def receive_SV(SV_list):
     global cache
     global cache_lock
 
+    #print("entered rxr SV")
+
     #list of recieved indexes
     recieved_indexes = SV_list[-1].split('-')
 
     #get the current summary vector
-    with cache_lock:
-        summary_vector = list(cache.keys())
+    summary_vector = list(cache.keys())
 
         #check if there are any data that is needed
-        try:
-            indexes = list(set(recieved_indexes) - set(summary_vector))
-        except:
-            pass
+    try:
+        indexes = list(set(recieved_indexes) - set(summary_vector))
+        #print(indexes)
+    except:
+        pass
 
     #is there data that is needed
     if len(indexes) > 0:
-
+        #print("entered rxr SV")
         #see if it is the last request or not
         count = 0
         for i in indexes:
@@ -267,18 +322,34 @@ def receive_SV(SV_list):
                 flag2 = 'L'
             else:
                 flag2 = 'N'
+            #create the msg to be pushed to the queue
+            msg = 'R' + ':' + SV_list[0] + ':' + SV_list[1] + ':' + flag2 + ':' + i
+            #push the msg to the lora_upper_q
+            with common.lora_upper_lock:
+                try:
+                    common.lora_upper_q.append(msg)
+                    with common.logging_lock:
+                        common.packet_type = 'None'
+                        common.log_activity('request sent to lora' +' '+ msg)
+                except:
+                    pass
+    else:
+        with common.logging_lock:
+            common.packet_type = 'None'
+            common.log_activity('Data not required')
 
-        #create the msg to be pushed to the queue
-        msg = 'R' + ':' + SV_list[0] + ':' + SV_list[1] + ':' + flag2 + ':' + i
+        if SV_list[-3] ==  'FS':
+            flag1 = 'RF'
+            reply_SV(flag1,SV_list[0])
 
-        #push the msg to the lora_upper_q
-        with common.lora_upper_lock:
-            try:
-                common.lora_upper_q.append(msg)
-                with common.logging_lock:
-                    common.log_activity('request sent to lora' + msg)
-            except:
-                pass
+        elif SV_list[-3] == 'RF':
+            with common.logging_lock:
+                common.packet_type = 'None'
+                common.log_activity('end of anti entropy with ' + SV_list[0])
+
+        else:
+            pass
+
 
 
 #when a data is recieved
@@ -293,7 +364,7 @@ def receive_Data(Data_list):
         #recieved data and store in cache
     items = Data_list[-1].split('-')
     #with cache_lock:
-    print(Data_list)
+    #print(Data_list)
     update_cache(items[1],items[0])
 
         #flags of the recieved data packet
@@ -309,17 +380,17 @@ def receive_Data(Data_list):
             reply_SV(flag1,Data_list[0])
 
         elif flag1 == 'RF':
-
-
-              #this means that end of anti entropy and that senders node has to be
-                            #inserted to served list and deleted from considered list
+            #this means that end of anti entropy and that senders node has to be
+            #inserted to served list and deleted from considered list
             #with served_list_lock:
             common.served_list.append(Data_list[0])
-            print(common.picked_list)
+            #print(common.picked_list)
             #with picked_list_lock:
             common.picked_list.remove(Data_list[0])
             with common.logging_lock:
-                common.log_activity('end of anti-entropy')
+                common.dest_id = Data_list[0]
+                common.packet_type = 'None'
+                common.log_activity('end of anti-entropy with' +' '+ Data_list[0])
 
         else:
             pass
@@ -330,12 +401,10 @@ def receive_Data(Data_list):
 def reply_SV(flag1,destination):
     global cache
     global cache_lock
-    print('entered reply_SV')
+    #print('entered reply_SV and sent to' + ' '+ destination)
     #get the current summary vector
-    with cache_lock:
-        summary_vector = list(cache.keys())
-        SV = '-'.join(summary_vector)
-
+    summary_vector = list(cache.keys())
+    SV = '-'.join(summary_vector)
     #build message
     #format => SV:dest:flag1:flag2:info
     msg = 'SV' + ':' + destination + ':' + flag1 + ':' + 'N' + ':' + SV
@@ -345,7 +414,8 @@ def reply_SV(flag1,destination):
         try:
             common.lora_upper_q.append(msg)
             with common.logging_lock:
-                common.log_activity('sent reply SV to Lora' + msg)
+                common.packet_type = 'None'
+                common.log_activity('sent reply SV to Lora' + ' '+ msg)
         except:
             pass
 
@@ -364,12 +434,15 @@ def update_cache(key,value):
         #print("Inside With UC   ")
         #update cache item
         cache[key] = value
+        #with common.logging_lock:
+            #common.log_activity('Epid > cach |  ' + key + ':' + value)
 
         #remove an entry if cache has exceeded the limit (10 here)
         if len(cache) > 10:
             rkey = list(cache)[0]
             rvalue = cache[rkey]
-            
+            #with common.logging_lock:
+                #common.log_activity('Epid ! cach |  ' + rkey+':'+rvalue)
             del cache[rkey]
 
 
@@ -382,6 +455,8 @@ def update_neighbours(MAC,time):
     with neigh_list_lock:
         # insert neighbours into list
         neigh_list[MAC] = time
+        #with common.logging_lock:
+            #common.log_activity('Epid > N_li |  ' + key + ':' + value)
 
         #update neighbour list
         current_time = utime.ticks_ms()

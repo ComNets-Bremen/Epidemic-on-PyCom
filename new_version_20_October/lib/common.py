@@ -39,6 +39,8 @@ ND_lower_lock = None
 
 # node unique ID
 node_id = 'None'
+dest_id = 'None'
+packet_type = 'None'
 
 picked_list = 'None'
 served_list = 'None'
@@ -98,9 +100,11 @@ def initialize():
 # log activity given as string
 def log_activity(info):
     global node_id
+    global dest_id
+    global packet_type
 
     # build log string
-    log_str = str(utime.ticks_ms()) + ' ' + node_id +  ' ' + info
+    log_str = str(utime.ticks_ms()) + ' ' + node_id +  ' ' + dest_id +' '+ packet_type + ' ' + info
 
     #print to console
     print(log_str)
