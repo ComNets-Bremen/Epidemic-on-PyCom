@@ -27,7 +27,6 @@ Several important metrics were identified to analyze the performance of the impl
 1. Delivery Ratio
 2. Average Delivery Delay
 3. Packet Drop
-4. Hop Count
 
 ### Network wide Delivery Ratio
 ![image](https://user-images.githubusercontent.com/63702181/126646293-70a05ab7-ae3e-4e5a-ba30-e012aaba8fbd.png)
