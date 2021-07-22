@@ -29,4 +29,9 @@ Several important metrics were identified to analyze the performance of the impl
 3. Packet Drop
 4. Hop Count
 
+### Network wide Delivery Ratio
+![image](https://user-images.githubusercontent.com/63702181/126646293-70a05ab7-ae3e-4e5a-ba30-e012aaba8fbd.png)
+### Network wide Delivery Delay
+![image](https://user-images.githubusercontent.com/63702181/126646533-f2a07ae1-16e4-4351-a15f-597b7f444fde.png)
+
 
