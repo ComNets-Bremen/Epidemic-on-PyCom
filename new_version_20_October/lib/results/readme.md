@@ -29,6 +29,7 @@ Several important metrics were identified to analyze the performance of the impl
 3. Packet Drop
 
 ### Network wide Delivery Ratio
+The delivery ratio values range between 25\% - 50\%. The maximum delivery ratio was nearly 50\% for the scenario where three nodes were stationary and three nodes were mobile placed inside a building. This can be because of the reason that in the indoor scenarios, the delivery ratio could go high due to the reflections and multi-path propagation from the many walls present inside the confined space of the building.<br/>
 ![image](https://user-images.githubusercontent.com/63702181/126646293-70a05ab7-ae3e-4e5a-ba30-e012aaba8fbd.png)
 ### Network wide Delivery Delay
 ![image](https://user-images.githubusercontent.com/63702181/126646533-f2a07ae1-16e4-4351-a15f-597b7f444fde.png)
