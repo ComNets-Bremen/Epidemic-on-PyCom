@@ -29,11 +29,16 @@ Several important metrics were identified to analyze the performance of the impl
 3. Packet Drop
 
 ### Network wide Delivery Ratio
-The delivery ratio values range between 25\% - 50\%. The maximum delivery ratio was nearly 50\% for the scenario where three nodes were stationary and three nodes were mobile placed inside a building. This can be because of the reason that in the indoor scenarios, the delivery ratio could go high due to the reflections and multi-path propagation from the many walls present inside the confined space of the building.<br/>
+The delivery ratio values range between 25\% - 50\%. The maximum delivery ratio was nearly 50\% for the scenario where three nodes were stationary and three nodes were mobile placed inside a building. This can be because of the reason that in the indoor scenarios, the delivery ratio could go high due to the reflections and multi-path propagation from the many walls present inside the confined space of the building.
+
 ![image](https://user-images.githubusercontent.com/63702181/126646293-70a05ab7-ae3e-4e5a-ba30-e012aaba8fbd.png)
 ### Network wide Delivery Delay
+The delivery delay displayed an unpredictable behaviour for all the scenarios and has an average value of 46.86 sec. When the data generation frequency is reduced, the delivery delay has improved in comparison to the 3rd scenario. But it was observed that higher delivery ratios can be achieved for an offset of higher delivery delays.
+
 ![image](https://user-images.githubusercontent.com/63702181/126646533-f2a07ae1-16e4-4351-a15f-597b7f444fde.png)
 ### Network wide packet loss
+Losses of packets was observed when looking into the output logs and all the scenarios displayed packet losses. It was also observed that the scenarios with low performance like, the 4th and 5th scenarios where the delivery ratio was low, displayed high packet losses. Therefore it is evident that one major reason for the low delivery ratios was the loss of packets. 
+
 ![image](https://user-images.githubusercontent.com/63702181/126647017-bd38beba-feb9-4f84-af5d-e4510640b34d.png)
 
 
